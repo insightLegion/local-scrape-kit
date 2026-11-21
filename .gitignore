@@ -1,0 +1,8 @@
+kit-output/
+build/
+*.spec
+__pycache__/
+.pytest_cache/
+dist/kit.exe
+dist/*.json
+smoke/

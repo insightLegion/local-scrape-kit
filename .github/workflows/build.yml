@@ -1,0 +1,58 @@
+name: build
+
+# Tests the browser scripts (Edge and Firefox) and kit.py on Windows, builds kit.exe, and puts the scripts and kit.exe on the
+# "latest" release. Runs on every push and pull request; the release only from main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:            # two pushes close together must not race on the "latest" release
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller pytest playwright==1.65.2
+      - name: dist/*.js is built from engine.js and targets/*.js
+        run: python build.py --check
+      - name: Tests in Microsoft Edge (local test site; hard stops; kit.py)
+        run: python -m pytest tests -q
+      - name: Tests again in Firefox
+        run: |
+          python -m playwright install firefox
+          python -m pytest tests -q
+        env:
+          CISCE_TEST_BROWSER: firefox
+      - name: Build kit.exe
+        run: pyinstaller --onefile --name kit kit.py
+      - name: Smoke test of kit.exe (one saved locator page next to it, expects 10 schools)
+        shell: bash
+        run: |
+          python -c 'import json; json.dump({"page-0001.html": open("tests/pages/result-isc-india-p1.html", encoding="utf-8").read()}, open("dist/cisce-pages-0001-0001.json", "w", encoding="utf-8"))'
+          ./dist/kit.exe --out smoke < /dev/null
+          python -c 'import csv; n = len(list(csv.DictReader(open("smoke/cisce-locator/cisce_schools.csv", encoding="utf-8-sig")))); assert n == 10, n; print(n, "schools")'
+      - uses: actions/upload-artifact@v6
+        with:
+          name: kit
+          path: dist/kit.exe
+      - name: Publish on the "latest" release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest dist/cisce-locator.js dist/cisce-org-list.js dist/url-list.js dist/kit.exe kit.py run-kit.bat \
+            --title "latest" --notes "Built from ${GITHUB_SHA::7}. Paste a dist/*.js script in the browser console; run kit.exe afterwards."
