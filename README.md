@@ -43,6 +43,9 @@ Read [GUIDELINES.md](GUIDELINES.md) before the first run. The short form:
 For a list script (`cisce-org-list.js`, `url-list.js`): open the site first, paste the script, paste the URLs into the box
 (one per line), click **Start**. URLs of other sites are left out (the browser does not allow them).
 
+Ready lists: [`lists/cisce-org.txt`](lists/cisce-org.txt) has 86 cisce.org pages and PDFs (notices, the notice archive, WordPress
+media lists) that the Wayback Machine does not have or has only as a 403 (list of 2026-11-21). Open https://cisce.org/ first.
+
 ## Unpack and check
 
 - Windows: double-click `kit.exe`. SmartScreen can warn about an unknown app: click **More info → Run anyway**.
